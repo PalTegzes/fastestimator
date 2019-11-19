@@ -12,29 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from fastestimator.op import NumpyOp
 import numpy as np
 
-from fastestimator.op import NumpyOp
 
-
-class Minmax(NumpyOp):
-    """Normalize data using the minmax method
-    """
-    def __init__(self, inputs=None, outputs=None, mode=None, epsilon=1e-7):
-        super().__init__(inputs=inputs, outputs=outputs, mode=mode)
-        self.epsilon = epsilon
-
-    def forward(self, data, state):
-        """Normalizes the data
+class Sometimes(NumpyOp):
+    """Perform a NumpyOp with a given probability
 
         Args:
-            data: Data to be normalized
-            state: A dictionary containing background information such as 'mode'
+            numpy_op (NumpyOp): The target op instance
+            prob (float): The probability of execution [0-1)
+    """
+    def __init__(self, numpy_op, prob=0.5):
+        super().__init__(inputs=numpy_op.inputs, outputs=numpy_op.outputs, mode=numpy_op.mode)
+        self.numpy_op = numpy_op
+        self.prob = prob
+
+    def forward(self, data, state):
+        """Execute the operator with probability
+
+        Args:
+            data: Tensor to be resized.
+            state: Information about the current execution context.
 
         Returns:
-            Normalized numpy array
+            output tensor.
         """
-        data_max = np.max(data)
-        data_min = np.min(data)
-        data = (data - data_min) / max((data_max - data_min), self.epsilon)
-        return data.astype(np.float32)
+        if self.prob > np.random.uniform():
+            data = self.numpy_op.forward(data, state)
+        return data
